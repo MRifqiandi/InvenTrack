@@ -41,11 +41,11 @@ const upload = multer({ storage: storage });
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.sendStatus(401); // Unauthorized
+  if (!token) return res.sendStatus(401);
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403); // Forbidden
-    req.user = user; // Menyimpan data user dari token
+    if (err) return res.sendStatus(403);
+    req.user = user;
     next();
   });
 }
@@ -60,8 +60,35 @@ app.get("/users", (req, res) => {
   });
 });
 
-app.get("/users/:id", (req, res) => {
+// app.get("/users/:id", (req, res) => {
+//   const { id } = req.params;
+//   connection.query(
+//     "SELECT id, username, email, first_name, last_name, photo_url FROM users WHERE id = ?",
+//     [id],
+//     (err, results) => {
+//       if (err) {
+//         console.error("Error fetching user data: ", err);
+//         return res.status(500).send("Server error");
+//       }
+//       if (results.length === 0) {
+//         return res.status(404).send("User not found");
+//       }
+//       res.json(results[0]);
+//     }
+//   );
+// });
+
+// Endpoint to get user details by ID with token authentication
+app.get("/users/:id", authenticateToken, (req, res) => {
   const { id } = req.params;
+
+  // Check if the user is trying to access their own data or if they have admin privileges
+  if (req.user.id !== parseInt(id) && !req.user.isAdmin) {
+    return res
+      .status(403)
+      .send("You are not authorized to access this user's data");
+  }
+
   connection.query(
     "SELECT id, username, email, first_name, last_name, photo_url FROM users WHERE id = ?",
     [id],
@@ -133,18 +160,50 @@ app.post("/login", (req, res) => {
   });
 });
 
+// app.post("/register", upload.single("photo"), async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: "Photo is required" });
+//     }
+//     const { username, email, password, first_name, last_name } = req.body;
+//     const photo_path = req.file.path;
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     connection.query(
+//       "INSERT INTO users (username, email, password, first_name, last_name, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
+//       [username, email, hashedPassword, first_name, last_name, photo_path],
+//       (err) => {
+//         if (err) {
+//           console.error(err);
+//           return res.status(500).send("Server error");
+//         }
+//         res.status(201).json({ message: "User registered successfully" });
+//       }
+//     );
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
 app.post("/register", upload.single("photo"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Photo is required" });
     }
     const { username, email, password, first_name, last_name } = req.body;
-    const photo_path = req.file.path;
+    const photoPath = req.file.path; // This is the relative file path
+
+    // Create the full URL for the profile image
+    const photoUrl = `http://192.168.1.2:3000/${photoPath.replace(
+      "uploads/",
+      ""
+    )}`;
 
     const hashedPassword = await bcrypt.hash(password, 10);
     connection.query(
       "INSERT INTO users (username, email, password, first_name, last_name, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
-      [username, email, hashedPassword, first_name, last_name, photo_path],
+      [username, email, hashedPassword, first_name, last_name, photoUrl], // Use the full photo URL
       (err) => {
         if (err) {
           console.error(err);
@@ -358,6 +417,31 @@ app.get("/items", authenticateToken, (req, res) => {
   });
 });
 
+app.get("/items/status", authenticateToken, (req, res) => {
+  const userId = req.user.id; // user id didapat dari JWT
+  const query = `
+    SELECT 
+      COUNT(*) AS totalItems, 
+      SUM(CASE WHEN status = 'Ada' THEN 1 ELSE 0 END) AS availableItems, 
+      SUM(CASE WHEN status = 'Hilang' THEN 1 ELSE 0 END) AS unavailableItems 
+    FROM items 
+    WHERE user_id = ?;
+  `;
+
+  connection.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching item status:", err);
+      return res.status(500).json({ error: "Error fetching item status" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "No items found" });
+    }
+
+    res.json(results[0]); // Kirim hasil hitungan dalam satu objek
+  });
+});
+
 app.get("/items/search", authenticateToken, (req, res) => {
   const userId = req.user.id; // user id didapat dari JWT
   const searchQuery = req.query.query; // Mendapatkan query pencarian dari parameter URL
@@ -377,7 +461,7 @@ app.get("/items/search", authenticateToken, (req, res) => {
       return res.status(404).json({ message: "No items found" });
     }
 
-    res.json(results); // Mengirimkan hasil pencarian item
+    res.json(results);
   });
 });
 
