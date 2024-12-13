@@ -21,7 +21,7 @@ const db = mysql.createPool({
   ssl: { rejectUnauthorized: false },
 });
 
-JWT_SECRET = adadhosndaksknurigbniownoiqwjd83298bjk238djkna832;
+JWT_SECRET = "adadhosndaksknurigbniownoiqwjd83298bjk238djkna832";
 
 db.query("SELECT 1", (err, results) => {
   if (err) {
