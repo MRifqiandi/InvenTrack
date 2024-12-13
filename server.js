@@ -18,7 +18,9 @@ console.log("DB_PASS:", dbPass);
 console.log("JWT_SECRET:", jwtSecret);
 
 const app = express();
-const PORT = 3000;
+// const PORT = 3000;
+
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
