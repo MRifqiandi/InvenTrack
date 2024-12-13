@@ -6,24 +6,27 @@ const multer = require("multer");
 // const connection = require("./db");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const PORT = process.env.PORT || 3000;
 
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
   ssl: { rejectUnauthorized: false },
 });
 
-db.connect((err) => {
+db.query("SELECT 1", (err, results) => {
   if (err) {
-    console.error("Error connecting to the database:", err);
-    throw err;
+    console.error("Database error:", err);
+  } else {
+    console.log("Database connected successfully:", results);
   }
-  console.log("Connected to MySQL database");
 });
 
 const app = express();
