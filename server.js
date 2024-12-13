@@ -10,15 +10,26 @@ const mysql = require("mysql2");
 const PORT = process.env.PORT || 3000;
 
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  host: process.env.DB_HOST.trim(),
+  user: process.env.DB_USER.trim(),
+  password: process.env.DB_PASSWORD.trim(),
+  database: process.env.DB_NAME.trim(),
+  port: process.env.DB_PORT.trim(),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
+
+// const db = mysql.createPool({
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME,
+//   port: process.env.DB_PORT,
+//   waitForConnections: true,
+//   connectionLimit: 10,
+//   queueLimit: 0,
+// });
 
 JWT_SECRET = "adadhosndaksknurigbniownoiqwjd83298bjk238djkna832";
 
