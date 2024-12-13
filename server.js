@@ -101,7 +101,7 @@ app.get("/users/:id", authenticateToken, (req, res) => {
       .send("You are not authorized to access this user's data");
   }
 
-  connection.query(
+  db.query(
     "SELECT id, username, email, first_name, last_name, photo_url FROM users WHERE id = ?",
     [id],
     (err, results) => {
@@ -128,7 +128,7 @@ app.post("/login", (req, res) => {
   }
 
   const query = "SELECT * FROM users WHERE username = ?";
-  connection.query(query, [username], (err, results) => {
+  db.query(query, [username], (err, results) => {
     if (err) {
       console.error("Error during login: ", err);
       return res.status(500).send("Server error");
@@ -181,7 +181,7 @@ app.post("/login", (req, res) => {
 //     const photo_path = req.file.path;
 
 //     const hashedPassword = await bcrypt.hash(password, 10);
-//     connection.query(
+//     db.query(
 //       "INSERT INTO users (username, email, password, first_name, last_name, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
 //       [username, email, hashedPassword, first_name, last_name, photo_path],
 //       (err) => {
@@ -213,7 +213,7 @@ app.post("/register", upload.single("photo"), async (req, res) => {
     )}`;
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    connection.query(
+    db.query(
       "INSERT INTO users (username, email, password, first_name, last_name, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
       [username, email, hashedPassword, first_name, last_name, photoUrl], // Use the full photo URL
       (err) => {
@@ -264,7 +264,7 @@ app.post("/register", upload.single("photo"), async (req, res) => {
 //   `;
 
 //   // Execute the query to insert the item
-//   connection.query(
+//   db.query(
 //     query,
 //     [
 //       name,
@@ -323,7 +323,7 @@ app.post("/register", upload.single("photo"), async (req, res) => {
 //     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 //   `;
 
-//     connection.query(
+//     db.query(
 //       query,
 //       [
 //         name,
@@ -385,7 +385,7 @@ app.post(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-    connection.query(
+    db.query(
       query,
       [
         name,
@@ -415,7 +415,7 @@ app.get("/items", authenticateToken, (req, res) => {
   const userId = req.user.id; // user id didapat dari JWT
   const query = "SELECT * FROM items WHERE user_id = ?";
 
-  connection.query(query, [userId], (err, results) => {
+  db.query(query, [userId], (err, results) => {
     if (err) {
       console.error("Error fetching items:", err);
       return res.status(500).json({ error: "Error fetching items" });
@@ -440,7 +440,7 @@ app.get("/items/status", authenticateToken, (req, res) => {
     WHERE user_id = ?;
   `;
 
-  connection.query(query, [userId], (err, results) => {
+  db.query(query, [userId], (err, results) => {
     if (err) {
       console.error("Error fetching item status:", err);
       return res.status(500).json({ error: "Error fetching item status" });
@@ -463,7 +463,7 @@ app.get("/items/search", authenticateToken, (req, res) => {
   }
 
   const query = "SELECT * FROM items WHERE user_id = ? AND name LIKE ?";
-  connection.query(query, [userId, `%${searchQuery}%`], (err, results) => {
+  db.query(query, [userId, `%${searchQuery}%`], (err, results) => {
     if (err) {
       console.error("Error fetching items:", err);
       return res.status(500).json({ error: "Error fetching items" });
@@ -483,7 +483,7 @@ app.get("/items/:id", authenticateToken, (req, res) => {
   const userId = req.user.id;
   const query = "SELECT * FROM items WHERE id = ? AND user_id = ?";
 
-  connection.query(query, [id, userId], (err, results) => {
+  db.query(query, [id, userId], (err, results) => {
     if (err) {
       console.error("Error fetching item from database:", err);
       return res.status(500).json({ error: "Server error" });
@@ -503,7 +503,7 @@ app.delete("/items/:id", authenticateToken, (req, res) => {
   const userId = req.user.id;
 
   const query = "DELETE FROM items WHERE id = ? AND user_id = ?";
-  connection.query(query, [id, userId], (err, results) => {
+  db.query(query, [id, userId], (err, results) => {
     if (err) {
       console.error("Error deleting item from database: ", err);
       return res.status(500).send("Server error");
@@ -578,7 +578,7 @@ app.put(
       userId,
     ];
 
-    connection.query(query, queryParams, (err, results) => {
+    db.query(query, queryParams, (err, results) => {
       if (err) {
         console.error("Error updating item in database: ", err);
         return res.status(500).send("Server error");
@@ -607,7 +607,7 @@ app.post("/favorites", authenticateToken, (req, res) => {
   // Query to check if the item already exists in the user's favorites
   const checkQuery =
     "SELECT * FROM favorites WHERE user_id = ? AND item_id = ?";
-  connection.query(checkQuery, [userId, itemId], (err, results) => {
+  db.query(checkQuery, [userId, itemId], (err, results) => {
     if (err) {
       console.error("Error checking favorite:", err);
       return res.status(500).json({ message: "Server error" });
@@ -621,7 +621,7 @@ app.post("/favorites", authenticateToken, (req, res) => {
 
     // If the item is not already in favorites, insert it
     const query = "INSERT INTO favorites (user_id, item_id) VALUES (?, ?)";
-    connection.query(query, [userId, itemId], (err, results) => {
+    db.query(query, [userId, itemId], (err, results) => {
       if (err) {
         console.error("Error adding to favorites:", err);
         return res.status(500).json({ message: "Server error" });
@@ -642,7 +642,7 @@ app.get("/favorites", authenticateToken, (req, res) => {
     WHERE favorites.user_id = ?
   `;
 
-  connection.query(query, [userId], (err, results) => {
+  db.query(query, [userId], (err, results) => {
     if (err) {
       console.error("Error fetching favorite items:", err);
       return res.status(500).json({ message: "Server error" });
@@ -663,7 +663,7 @@ app.delete("/favorites/:itemId", authenticateToken, (req, res) => {
 
   // Query to delete the item from the user's favorites
   const query = "DELETE FROM favorites WHERE user_id = ? AND item_id = ?";
-  connection.query(query, [userId, itemId], (err, results) => {
+  db.query(query, [userId, itemId], (err, results) => {
     if (err) {
       console.error("Error removing from favorites:", err);
       return res.status(500).json({ message: "Server error" });
