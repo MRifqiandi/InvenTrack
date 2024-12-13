@@ -6,21 +6,28 @@ const multer = require("multer");
 const connection = require("./db");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const mysql = require("mysql");
+const PORT = process.env.PORT || 3000;
 
-const dbHost = process.env.DB_HOST;
-const dbUser = process.env.DB_USER;
-const dbPass = process.env.DB_PASS;
-const jwtSecret = process.env.JWT_SECRET;
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+  ssl: { rejectUnauthorized: false },
+});
 
-console.log("DB_HOST:", dbHost);
-console.log("DB_USER:", dbUser);
-console.log("DB_PASS:", dbPass);
-console.log("JWT_SECRET:", jwtSecret);
+db.connect((err) => {
+  if (err) {
+    console.error("Error connecting to the database:", err);
+    throw err;
+  }
+  console.log("Connected to MySQL database");
+});
 
 const app = express();
 // const PORT = 3000;
-
-const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
