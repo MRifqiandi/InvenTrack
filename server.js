@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const connection = require("./db");
 const jwt = require("jsonwebtoken");
