@@ -3,43 +3,32 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
-// const connection = require("./db");
+const db = require("./db");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-const mysql = require("mysql2");
+// const mysql = require("mysql2");
 const PORT = process.env.PORT || 3000;
 
-const db = mysql.createPool({
-  host: process.env.DB_HOST.trim(),
-  user: process.env.DB_USER.trim(),
-  password: process.env.DB_PASSWORD.trim(),
-  database: process.env.DB_NAME.trim(),
-  port: process.env.DB_PORT.trim(),
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
 // const db = mysql.createPool({
-//   host: process.env.DB_HOST,
-//   user: process.env.DB_USER,
-//   password: process.env.DB_PASSWORD,
-//   database: process.env.DB_NAME,
-//   port: process.env.DB_PORT,
-//   waitForConnections: true,
-//   connectionLimit: 10,
+//   host: process.env.DB_HOST.trim(),
+//   user: process.env.DB_USER.trim(),
+//   password: process.env.DB_PASSWORD.trim(),
+//   database: process.env.DB_NAME.trim(),
+//   port: process.env.DB_PORT.trim(),
+//   waitFordbs: true,
+//   dbLimit: 10,
 //   queueLimit: 0,
 // });
 
-JWT_SECRET = "adadhosndaksknurigbniownoiqwjd83298bjk238djkna832";
+// db.query("SELECT 1", (err, results) => {
+//   if (err) {
+//     console.error("Database error:", err);
+//   } else {
+//     console.log("Database connected successfully:", results);
+//   }
+// });
 
-db.query("SELECT 1", (err, results) => {
-  if (err) {
-    console.error("Database error:", err);
-  } else {
-    console.log("Database connected successfully:", results);
-  }
-});
+JWT_SECRET = "adadhosndaksknurigbniownoiqwjd83298bjk238djkna832";
 
 const app = express();
 // const PORT = 3000;
@@ -75,7 +64,7 @@ function authenticateToken(req, res, next) {
 }
 
 app.get("/users", (req, res) => {
-  connection.query("SELECT * FROM users", (err, results) => {
+  db.query("SELECT * FROM users", (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Server error");
@@ -86,7 +75,7 @@ app.get("/users", (req, res) => {
 
 // app.get("/users/:id", (req, res) => {
 //   const { id } = req.params;
-//   connection.query(
+//   db.query(
 //     "SELECT id, username, email, first_name, last_name, photo_url FROM users WHERE id = ?",
 //     [id],
 //     (err, results) => {
@@ -219,7 +208,7 @@ app.post("/register", upload.single("photo"), async (req, res) => {
     const photoPath = req.file.path; // This is the relative file path
 
     // Create the full URL for the profile image
-    const photoUrl = `http://192.168.1.2:3000/${photoPath.replace(
+    const photoUrl = `https://inventrack-production.up.railway.app/${photoPath.replace(
       "uploads/",
       ""
     )}`;
@@ -236,6 +225,81 @@ app.post("/register", upload.single("photo"), async (req, res) => {
         res.status(201).json({ message: "User registered successfully" });
       }
     );
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/edit-profile/:id", upload.single("photo"), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { username, email, password, first_name, last_name } = req.body;
+    let photoUrl;
+
+    // Jika pengguna mengunggah foto baru, gunakan URL foto baru, jika tidak, tetap gunakan URL foto lama
+    if (req.file) {
+      const photoPath = req.file.path; // Jalur file relatif
+      photoUrl = `https://inventrack-production.up.railway.app/${photoPath.replace(
+        "uploads/",
+        ""
+      )}`; // URL penuh untuk gambar baru
+    }
+
+    // Jika password ada, hash password baru
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    // Buat array untuk menyimpan kolom dan nilai untuk pembaruan dinamis
+    const updateFields = [];
+    const updateValues = [];
+
+    if (username) {
+      updateFields.push("username = ?");
+      updateValues.push(username);
+    }
+    if (email) {
+      updateFields.push("email = ?");
+      updateValues.push(email);
+    }
+    if (hashedPassword) {
+      updateFields.push("password = ?");
+      updateValues.push(hashedPassword);
+    }
+    if (first_name) {
+      updateFields.push("first_name = ?");
+      updateValues.push(first_name);
+    }
+    if (last_name) {
+      updateFields.push("last_name = ?");
+      updateValues.push(last_name);
+    }
+    if (photoUrl) {
+      updateFields.push("photo_url = ?");
+      updateValues.push(photoUrl);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    // Tambahkan ID pengguna ke akhir array nilai
+    updateValues.push(userId);
+
+    const query = `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`;
+
+    db.query(query, updateValues, (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Server error" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.status(200).json({ message: "Profile updated successfully" });
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
@@ -386,7 +450,7 @@ app.post(
     const userId = req.user.id; // Mendapatkan user ID dari token yang sudah terautentikasi
 
     // Membuat URL lengkap untuk gambar yang disimpan
-    const imageUrl = `http://192.168.1.2:3000/${imagePath.replace(
+    const imageUrl = `https://inventrack-production.up.railway.app/${imagePath.replace(
       "uploads/",
       ""
     )}`;
@@ -442,12 +506,13 @@ app.get("/items", authenticateToken, (req, res) => {
 });
 
 app.get("/items/status", authenticateToken, (req, res) => {
-  const userId = req.user.id; // user id didapat dari JWT
+  const userId = req.user.id;
+
   const query = `
     SELECT 
       COUNT(*) AS totalItems, 
-      SUM(CASE WHEN status = 'Ada' THEN 1 ELSE 0 END) AS availableItems, 
-      SUM(CASE WHEN status = 'Hilang' THEN 1 ELSE 0 END) AS unavailableItems 
+      COALESCE(SUM(CASE WHEN status = 'Ada' THEN 1 ELSE 0 END), 0) AS availableItems, 
+      COALESCE(SUM(CASE WHEN status = 'Hilang' THEN 1 ELSE 0 END), 0) AS unavailableItems 
     FROM items 
     WHERE user_id = ?;
   `;
@@ -462,13 +527,13 @@ app.get("/items/status", authenticateToken, (req, res) => {
       return res.status(404).json({ message: "No items found" });
     }
 
-    res.json(results[0]); // Kirim hasil hitungan dalam satu objek
+    res.json(results[0] || {});
   });
 });
 
 app.get("/items/search", authenticateToken, (req, res) => {
-  const userId = req.user.id; // user id didapat dari JWT
-  const searchQuery = req.query.query; // Mendapatkan query pencarian dari parameter URL
+  const userId = req.user.id;
+  const searchQuery = req.query.query;
 
   if (!searchQuery) {
     return res.status(400).json({ message: "Search query is required" });
@@ -559,7 +624,7 @@ app.put(
     }
 
     // Membuat URL lengkap untuk gambar yang disimpan
-    const imageUrl = `http://192.168.1.2:3000/${imagePath.replace(
+    const imageUrl = `https://inventrack-production.up.railway.app/${imagePath.replace(
       "uploads/",
       ""
     )}`;
