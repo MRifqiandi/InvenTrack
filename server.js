@@ -3,30 +3,30 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
-const db = require("./db");
+// const db = require("./db");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-// const mysql = require("mysql2");
+const mysql = require("mysql2");
 const PORT = process.env.PORT || 3000;
 
-// const db = mysql.createPool({
-//   host: process.env.DB_HOST.trim(),
-//   user: process.env.DB_USER.trim(),
-//   password: process.env.DB_PASSWORD.trim(),
-//   database: process.env.DB_NAME.trim(),
-//   port: process.env.DB_PORT.trim(),
-//   waitFordbs: true,
-//   dbLimit: 10,
-//   queueLimit: 0,
-// });
+const db = mysql.createPool({
+  host: process.env.DB_HOST.trim(),
+  user: process.env.DB_USER.trim(),
+  password: process.env.DB_PASSWORD.trim(),
+  database: process.env.DB_NAME.trim(),
+  port: process.env.DB_PORT.trim(),
+  waitFordbs: true,
+  dbLimit: 10,
+  queueLimit: 0,
+});
 
-// db.query("SELECT 1", (err, results) => {
-//   if (err) {
-//     console.error("Database error:", err);
-//   } else {
-//     console.log("Database connected successfully:", results);
-//   }
-// });
+db.query("SELECT 1", (err, results) => {
+  if (err) {
+    console.error("Database error:", err);
+  } else {
+    console.log("Database connected successfully:", results);
+  }
+});
 
 JWT_SECRET = "adadhosndaksknurigbniownoiqwjd83298bjk238djkna832";
 
